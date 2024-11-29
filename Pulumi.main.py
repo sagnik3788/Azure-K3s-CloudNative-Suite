@@ -1,6 +1,5 @@
 import pulumi
 from pulumi_azure_native import resources, network, compute
-from pulumi_kubernetes import Provider
 from pulumi import Output
 
 # Configurations
@@ -29,9 +28,37 @@ subnet = network.Subnet(
     address_prefix="10.0.1.0/24",
 )
 
-# Create Azure VMs
+# Create public IP addresses and network interfaces for VMs
 vm_list = []
+nic_list = []
+public_ip_list = []
+
 for i in range(3):  # 3 nodes for HA
+    # Create public IP for each VM
+    public_ip = network.PublicIPAddress(
+        f"public-ip-{i}",
+        resource_group_name=resource_group.name,
+        location=location,
+        public_ip_allocation_method="Dynamic",
+    )
+    public_ip_list.append(public_ip)
+
+    # Create network interface
+    nic = compute.NetworkInterface(
+        f"nic-{i}",
+        resource_group_name=resource_group.name,
+        location=location,
+        ip_configurations=[
+            {
+                "name": "ipconfig",
+                "subnet": {"id": subnet.id},
+                "public_ip_address": {"id": public_ip.id},
+            }
+        ],
+    )
+    nic_list.append(nic)
+
+    # Create VM
     vm = compute.VirtualMachine(
         f"k3s-node-{i}",
         resource_group_name=resource_group.name,
@@ -39,32 +66,30 @@ for i in range(3):  # 3 nodes for HA
         vm_size=vm_size,
         network_profile={
             "network_interfaces": [
-                {
-                    "id": pulumi.Output.all(resource_group.name, subnet.id).apply(
-                        lambda args: compute.NetworkInterface(
-                            f"nic-{i}",
-                            resource_group_name=args[0],
-                            ip_configurations=[
-                                {
-                                    "name": "ipconfig",
-                                    "subnet": {"id": args[1]},
-                                }
-                            ],
-                        ).id
-                    )
-                }
+                {"id": nic.id}
             ]
         },
         os_profile={
             "computer_name": f"k3s-node-{i}",
             "admin_username": admin_username,
             "linux_configuration": {
-                "ssh": {"public_keys": [{"key_data": ssh_key, "path": "/home/{admin_username}/.ssh/authorized_keys"}]},
+                "ssh": {
+                    "public_keys": [
+                        {
+                            "key_data": ssh_key,
+                        }
+                    ]
+                },
+                "script": {
+                    "script_content": """#!/bin/bash
+                    curl -sfL https://get.k3s.io | sh -
+                    """
+                }
             },
         },
         storage_profile={"image_reference": {"publisher": "Canonical", "offer": "UbuntuServer", "sku": "18.04-LTS"}},
     )
     vm_list.append(vm)
 
-# Output public IPs
-pulumi.export("node_ips", [vm.public_ip for vm in vm_list])
+# Outputs
+pulumi.export("public_ips", [ip.ip_address for ip in public_ip_list])

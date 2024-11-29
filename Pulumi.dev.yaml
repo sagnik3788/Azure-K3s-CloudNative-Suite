@@ -1,2 +1,7 @@
 config:
   azure-native:location: WestUS2
+  Azure-K3s-CloudNative-Suite:resource_group: my-resource-group
+  Azure-K3s-CloudNative-Suite:admin_username: adminuser
+  Azure-K3s-CloudNative-Suite:ssh_key:
+    secure: AAABAJscy4RMDtMcYGgMAWnyi71A4/2mc54FkO3fny8hLBpWoPm5dBmipTGccb4hlw==
+  Azure-K3s-CloudNative-Suite:vm_size: Standard_B2s
