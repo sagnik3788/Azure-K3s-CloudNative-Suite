@@ -9,7 +9,7 @@ TERRAFORM_DIR = "./"
 
 @app.post("/create-cluster")
 async def create_cluster():
-    """Creates a K3s cluster using Terraform."""
+    """Creates a K3s cluster"""
     try:
         # Navigate to the Terraform directory
         os.chdir(TERRAFORM_DIR)
