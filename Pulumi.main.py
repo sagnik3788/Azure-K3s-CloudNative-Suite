@@ -93,3 +93,9 @@ for i in range(3):  # 3 nodes for HA
 
 # Outputs
 pulumi.export("public_ips", [ip.ip_address for ip in public_ip_list])
+pulumi.export("vm_names", [vm.name for vm in vm_list])
+
+# Optional: Output the IPs in a structured way with VM names
+for i, vm in enumerate(vm_list):
+    pulumi.export(f"vm_{i}_ip", public_ip_list[i].ip_address)
+    pulumi.export(f"vm_{i}_name", vm.name)
